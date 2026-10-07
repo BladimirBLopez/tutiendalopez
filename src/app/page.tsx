@@ -1,101 +1,481 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import BarcodeScanner from "@/components/BarcodeScanner";
+
+type Producto = {
+  id: number;
+  nombre: string;
+  barcode: string | null;
+  precioCompra: string;
+  precioVenta: string;
+  stock: number;
+  stockMinimo: number;
+};
+
+type Linea = { producto: Producto; cantidad: number };
+
+const formVacio = {
+  nombre: "",
+  barcode: "",
+  precioCompra: "",
+  precioVenta: "",
+  stock: "",
+  stockMinimo: "5",
+};
+
+const campo = "w-full rounded-lg border border-gray-300 p-3 text-base";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [tab, setTab] = useState<"vender" | "productos">("vender");
+  const [q, setQ] = useState("");
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [carrito, setCarrito] = useState<Linea[]>([]);
+  const [metodo, setMetodo] = useState<"efectivo" | "qr">("efectivo");
+  const [recibido, setRecibido] = useState("");
+  const [error, setError] = useState("");
+  const [ok, setOk] = useState("");
+  const [cobrando, setCobrando] = useState(false);
+  const [camara, setCamara] = useState<"venta" | "codigo" | null>(null);
+  const [nuevo, setNuevo] = useState<typeof formVacio | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const cargar = useCallback(async () => {
+    const res = await fetch("/api/productos?q=" + encodeURIComponent(q.trim()));
+    if (res.ok) setProductos(await res.json());
+  }, [q]);
+
+  useEffect(() => {
+    const t = setTimeout(cargar, 250);
+    return () => clearTimeout(t);
+  }, [cargar]);
+
+  function cambiarTab(t: "vender" | "productos") {
+    setTab(t);
+    setQ("");
+    setError("");
+    setOk("");
+    setNuevo(null);
+  }
+
+  function agregar(p: Producto) {
+    setError("");
+    setOk("");
+    const actual = carrito.find((l) => l.producto.id === p.id)?.cantidad ?? 0;
+    if (actual + 1 > p.stock) {
+      setError(
+        p.stock <= 0
+          ? "Sin stock: " + p.nombre
+          : "Solo hay " + p.stock + " de " + p.nombre
+      );
+      return;
+    }
+    setCarrito((prev) =>
+      prev.some((l) => l.producto.id === p.id)
+        ? prev.map((l) =>
+            l.producto.id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l
+          )
+        : [...prev, { producto: p, cantidad: 1 }]
+    );
+    setQ("");
+    inputRef.current?.focus();
+  }
+
+  async function escanear(code: string) {
+    const res = await fetch("/api/productos?q=" + encodeURIComponent(code));
+    if (!res.ok) return;
+    const data: Producto[] = await res.json();
+    const p = data.find((x) => x.barcode === code);
+    if (p) {
+      agregar(p);
+      return;
+    }
+    setQ("");
+    setNuevo({ ...formVacio, barcode: code });
+  }
+
+  async function alEnter(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || tab !== "vender") return;
+    e.preventDefault();
+    const code = q.trim();
+    if (!code) return;
+    if (/^\d{6,}$/.test(code)) await escanear(code);
+    else if (productos.length === 1) agregar(productos[0]);
+  }
+
+  function cambiarCantidad(id: number, delta: number) {
+    setError("");
+    setCarrito((prev) =>
+      prev
+        .map((l) => {
+          if (l.producto.id !== id) return l;
+          const nueva = l.cantidad + delta;
+          if (nueva > l.producto.stock) return l;
+          return { ...l, cantidad: nueva };
+        })
+        .filter((l) => l.cantidad > 0)
+    );
+  }
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nuevo) return;
+    setError("");
+    setGuardando(true);
+    const res = await fetch("/api/productos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevo),
+    });
+    setGuardando(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "No se pudo guardar");
+      return;
+    }
+    setNuevo(null);
+    if (tab === "vender") agregar(data as Producto);
+    cargar();
+  }
+
+  const total =
+    Math.round(
+      carrito.reduce((s, l) => s + Number(l.producto.precioVenta) * l.cantidad, 0) * 100
+    ) / 100;
+  const vuelto = recibido ? Math.round((Number(recibido) - total) * 100) / 100 : null;
+
+  async function cobrar() {
+    if (carrito.length === 0 || cobrando) return;
+    setError("");
+    setOk("");
+    setCobrando(true);
+    const res = await fetch("/api/ventas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        metodoPago: metodo,
+        items: carrito.map((l) => ({
+          productoId: l.producto.id,
+          cantidad: l.cantidad,
+        })),
+      }),
+    });
+    setCobrando(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "No se pudo registrar la venta");
+      return;
+    }
+    setOk("Venta registrada: Bs. " + total.toFixed(2));
+    setCarrito([]);
+    setRecibido("");
+    cargar();
+    inputRef.current?.focus();
+  }
+
+  const formNuevo = nuevo && (
+    <form onSubmit={guardar} className="mb-4 space-y-3 rounded-lg border-2 border-green-600 p-4">
+      <p className="font-semibold">
+        {tab === "vender" ? "Producto nuevo: se agrega a la venta" : "Nuevo producto"}
+      </p>
+      <input
+        className={campo}
+        placeholder="Nombre del producto"
+        value={nuevo.nombre}
+        onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
+        required
+        autoFocus
+      />
+      <div className="flex gap-2">
+        <input
+          className={campo}
+          placeholder="Código de barras (opcional)"
+          value={nuevo.barcode}
+          onChange={(e) => setNuevo({ ...nuevo, barcode: e.target.value })}
+        />
+        <button
+          type="button"
+          onClick={() => setCamara("codigo")}
+          className="rounded-lg bg-gray-800 px-4 text-xl text-white"
+        >
+          📷
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          className={campo}
+          type="number"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="Precio venta"
+          value={nuevo.precioVenta}
+          onChange={(e) => setNuevo({ ...nuevo, precioVenta: e.target.value })}
+          required
+        />
+        <input
+          className={campo}
+          type="number"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="Precio compra"
+          value={nuevo.precioCompra}
+          onChange={(e) => setNuevo({ ...nuevo, precioCompra: e.target.value })}
+        />
+        <input
+          className={campo}
+          type="number"
+          inputMode="numeric"
+          placeholder="Stock (cuántos hay)"
+          value={nuevo.stock}
+          onChange={(e) => setNuevo({ ...nuevo, stock: e.target.value })}
+          required
+        />
+        <input
+          className={campo}
+          type="number"
+          inputMode="numeric"
+          placeholder="Stock mínimo"
+          value={nuevo.stockMinimo}
+          onChange={(e) => setNuevo({ ...nuevo, stockMinimo: e.target.value })}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setNuevo(null)}
+          className="flex-1 rounded-lg bg-gray-200 p-3 font-semibold"
+        >
+          Cancelar
+        </button>
+        <button
+          disabled={guardando}
+          className="flex-1 rounded-lg bg-green-600 p-3 font-semibold text-white disabled:opacity-50"
+        >
+          {guardando ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </form>
+  );
+
+  const tabCls = (t: string) =>
+    "flex-1 p-3 text-lg font-semibold " +
+    (tab === t ? "border-b-4 border-green-600 text-green-700" : "text-gray-500");
+
+  return (
+    <main className="mx-auto max-w-2xl pb-72">
+      <div className="sticky top-0 z-10 flex border-b bg-white">
+        <button onClick={() => cambiarTab("vender")} className={tabCls("vender")}>
+          Vender
+        </button>
+        <button onClick={() => cambiarTab("productos")} className={tabCls("productos")}>
+          Productos
+        </button>
+      </div>
+
+      <div className="p-4">
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={alEnter}
+            placeholder={
+              tab === "vender" ? "Escribe el nombre o escanea" : "Buscar producto"
+            }
+            className={campo}
+          />
+          {tab === "vender" && (
+            <button
+              onClick={() => setCamara("venta")}
+              className="rounded-lg bg-gray-800 px-4 text-2xl text-white"
+            >
+              📷
+            </button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {camara && (
+          <BarcodeScanner
+            onScan={(c) =>
+              camara === "venta"
+                ? escanear(c)
+                : setNuevo((f) => (f ? { ...f, barcode: c } : f))
+            }
+            onClose={() => setCamara(null)}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        )}
+
+        {error && <p className="mt-3 text-red-600">{error}</p>}
+        {ok && <p className="mt-3 font-semibold text-green-700">{ok}</p>}
+
+        <div className="mt-3">{formNuevo}</div>
+
+        {tab === "vender" ? (
+          <>
+            {q.trim() && (
+              <ul className="space-y-1 rounded-lg border p-2">
+                {productos.slice(0, 8).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => agregar(p)}
+                      className="flex w-full items-center justify-between rounded p-2 text-left active:bg-gray-100"
+                    >
+                      <span>{p.nombre}</span>
+                      <span className="text-sm text-gray-500">
+                        Bs. {Number(p.precioVenta).toFixed(2)} · {p.stock} u.
+                      </span>
+                    </button>
+                  </li>
+                ))}
+                {productos.length === 0 && (
+                  <li className="p-2 text-gray-500">No encontrado</li>
+                )}
+              </ul>
+            )}
+
+            <ul className="mt-4 space-y-2">
+              {carrito.map((l) => (
+                <li
+                  key={l.producto.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div>
+                    <p className="font-semibold">{l.producto.nombre}</p>
+                    <p className="text-sm text-gray-500">
+                      Bs. {(Number(l.producto.precioVenta) * l.cantidad).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => cambiarCantidad(l.producto.id, -1)}
+                      className="h-10 w-10 rounded-full bg-gray-200 text-xl"
+                    >
+                      -
+                    </button>
+                    <span className="w-6 text-center text-lg">{l.cantidad}</span>
+                    <button
+                      onClick={() => cambiarCantidad(l.producto.id, 1)}
+                      className="h-10 w-10 rounded-full bg-gray-200 text-xl"
+                    >
+                      +
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {carrito.length === 0 && !q.trim() && (
+                <p className="py-6 text-center text-gray-500">
+                  Escanea o busca un producto para empezar
+                </p>
+              )}
+            </ul>
+          </>
+        ) : (
+          <>
+            {!nuevo && (
+              <button
+                onClick={() => setNuevo(formVacio)}
+                className="mb-4 w-full rounded-lg bg-green-600 p-3 text-lg font-semibold text-white"
+              >
+                + Nuevo producto
+              </button>
+            )}
+            <ul className="space-y-2">
+              {productos.map((p) => {
+                const bajo = p.stock <= p.stockMinimo;
+                return (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div>
+                      <p className="font-semibold">{p.nombre}</p>
+                      <p className="text-sm text-gray-500">
+                        Bs. {Number(p.precioVenta).toFixed(2)}
+                        {p.barcode ? " · " + p.barcode : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        "rounded-full px-3 py-1 text-sm font-semibold " +
+                        (bajo ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")
+                      }
+                    >
+                      {p.stock} u.
+                    </span>
+                  </li>
+                );
+              })}
+              {productos.length === 0 && (
+                <p className="py-6 text-center text-gray-500">No hay productos</p>
+              )}
+            </ul>
+          </>
+        )}
+      </div>
+
+      {tab === "vender" && (
+        <div className="fixed inset-x-0 bottom-0 border-t bg-white p-4">
+          <div className="mx-auto max-w-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-lg">Total</span>
+              <span className="text-3xl font-bold">Bs. {total.toFixed(2)}</span>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMetodo("efectivo")}
+                className={
+                  "flex-1 rounded-lg p-2 font-semibold " +
+                  (metodo === "efectivo" ? "bg-green-600 text-white" : "bg-gray-200")
+                }
+              >
+                Efectivo
+              </button>
+              <button
+                onClick={() => setMetodo("qr")}
+                className={
+                  "flex-1 rounded-lg p-2 font-semibold " +
+                  (metodo === "qr" ? "bg-green-600 text-white" : "bg-gray-200")
+                }
+              >
+                QR
+              </button>
+            </div>
+
+            {metodo === "efectivo" && (
+              <div className="flex items-center gap-3">
+                <input
+                  className={campo}
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="Recibido"
+                  value={recibido}
+                  onChange={(e) => setRecibido(e.target.value)}
+                />
+                {vuelto !== null && (
+                  <span
+                    className={
+                      "whitespace-nowrap font-semibold " +
+                      (vuelto < 0 ? "text-red-600" : "text-gray-800")
+                    }
+                  >
+                    {vuelto < 0 ? "Falta" : "Vuelto"} Bs. {Math.abs(vuelto).toFixed(2)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={cobrar}
+              disabled={carrito.length === 0 || cobrando}
+              className="w-full rounded-lg bg-blue-600 p-4 text-xl font-bold text-white disabled:opacity-40"
+            >
+              {cobrando ? "Registrando..." : "Cobrar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
