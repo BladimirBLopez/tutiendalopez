@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Producto {
+  id           Int         @id @default(autoincrement())
+  nombre       String
+  barcode      String?     @unique
+  precioCompra Decimal     @default(0) @db.Decimal(10, 2)
+  precioVenta  Decimal     @db.Decimal(10, 2)
+  stock        Int         @default(0)
+  stockMinimo  Int         @default(5)
+  vencimiento  DateTime?
+  activo       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        ItemVenta[]
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  telefono  String?
+  createdAt DateTime @default(now())
+  ventas    Venta[]
+  fiados    Fiado[]
+}
+
+model Venta {
+  id         Int         @id @default(autoincrement())
+  total      Decimal     @db.Decimal(10, 2)
+  metodoPago String      @default("efectivo")
+  clienteId  Int?
+  cliente    Cliente?    @relation(fields: [clienteId], references: [id])
+  createdAt  DateTime    @default(now())
+  items      ItemVenta[]
+  fiado      Fiado?
+}
+
+model ItemVenta {
+  id         Int      @id @default(autoincrement())
+  ventaId    Int
+  venta      Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id])
+  cantidad   Int
+  precioUnit Decimal  @db.Decimal(10, 2)
+  costoUnit  Decimal  @db.Decimal(10, 2)
+}
+
+model Fiado {
+  id        Int      @id @default(autoincrement())
+  clienteId Int
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  ventaId   Int?     @unique
+  venta     Venta?   @relation(fields: [ventaId], references: [id])
+  monto     Decimal  @db.Decimal(10, 2)
+  pagado    Decimal  @default(0) @db.Decimal(10, 2)
+  estado    String   @default("pendiente")
+  createdAt DateTime @default(now())
+  pagos     Pago[]
+}
+
+model Pago {
+  id        Int      @id @default(autoincrement())
+  fiadoId   Int
+  fiado     Fiado    @relation(fields: [fiadoId], references: [id], onDelete: Cascade)
+  monto     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+}
