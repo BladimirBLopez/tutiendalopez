@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { NOMBRE_COOKIE, verificarToken } from "@/lib/auth";
+import { TIENDAS_WEB } from "@/lib/tiendas";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -7,7 +8,7 @@ export async function middleware(req: NextRequest) {
   const esPublica =
     pathname === "/login" ||
     pathname === "/api/login" ||
-    pathname === "/api/tiendas" ||
+    TIENDAS_WEB.some((t) => pathname === "/" + t.slug) ||
     pathname === "/api/yape/recibir";
   const valida = await verificarToken(req.cookies.get(NOMBRE_COOKIE)?.value);
 
