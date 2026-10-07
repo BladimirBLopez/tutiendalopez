@@ -5,6 +5,7 @@ import CobroModal from "@/components/CobroModal";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import DetalleProducto from "@/components/DetalleProducto";
 import ListaVentas from "@/components/ListaVentas";
+import BarraApp from "@/components/BarraApp";
 
 type Producto = {
   id: number;
@@ -423,10 +424,6 @@ export default function Home() {
     </form>
   );
 
-  const tabCls = (t: string) =>
-    "flex-1 p-3 text-lg font-semibold " +
-    (tab === t ? "border-b-4 border-green-600 text-green-700" : "text-gray-500");
-
   async function salir() {
     if (!confirm("¿Cerrar sesión?")) return;
     await fetch("/api/login", { method: "DELETE" });
@@ -436,20 +433,7 @@ export default function Home() {
   if (tab === "ventas") {
     return (
       <main className="mx-auto max-w-2xl pb-8">
-        <div className="sticky top-0 z-10 flex border-b bg-white">
-          <button onClick={() => cambiarTab("vender")} className={tabCls("vender")}>
-            Vender
-          </button>
-          <button onClick={() => cambiarTab("productos")} className={tabCls("productos")}>
-            Productos
-          </button>
-          <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
-            Ventas
-          </button>
-          <button onClick={salir} className="px-4 text-sm font-medium text-gray-500">
-            Salir
-          </button>
-        </div>
+        <BarraApp actual="ventas" onIr={cambiarTab} onSalir={salir} />
         <ListaVentas />
       </main>
     );
@@ -457,20 +441,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-2xl pb-72">
-      <div className="sticky top-0 z-10 flex border-b bg-white">
-        <button onClick={() => cambiarTab("vender")} className={tabCls("vender")}>
-          Vender
-        </button>
-        <button onClick={() => cambiarTab("productos")} className={tabCls("productos")}>
-          Productos
-        </button>
-        <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
-          Ventas
-        </button>
-        <button onClick={salir} className="px-4 text-sm font-medium text-gray-500">
-          Salir
-        </button>
-      </div>
+      <BarraApp actual={tab} onIr={cambiarTab} onSalir={salir} />
 
       <div className="p-4">
         <div className="flex gap-2">
