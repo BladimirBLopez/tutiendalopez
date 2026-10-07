@@ -34,6 +34,7 @@ export async function POST(req: Request) {
   const stock = Math.trunc(Number(body.stock ?? 0));
   const stockMinimo = Math.trunc(Number(body.stockMinimo ?? 5));
   const barcode = body.barcode ? String(body.barcode).trim() : null;
+  const ganancia = Number(body.ganancia ?? 0);
 
   if (!nombre || !Number.isFinite(precioVenta) || precioVenta < 0) {
     return NextResponse.json(
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
         barcode,
         precioVenta,
         precioCompra: Number.isFinite(precioCompra) ? precioCompra : 0,
+        ganancia: Number.isFinite(ganancia) ? ganancia : 0,
         stock: Number.isFinite(stock) ? stock : 0,
         stockMinimo: Number.isFinite(stockMinimo) ? stockMinimo : 5,
         vencimiento: body.vencimiento ? new Date(body.vencimiento) : null,

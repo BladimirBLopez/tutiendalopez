@@ -9,22 +9,35 @@ type Producto = {
   barcode: string | null;
   precioCompra: string;
   precioVenta: string;
+  ganancia: string;
   stock: number;
   stockMinimo: number;
 };
 
 type Linea = { producto: Producto; cantidad: number };
 
+type Compra = {
+  id: number;
+  nombre: string;
+  ganancia: number;
+  cantidad: string;
+  costo: string;
+  precio: string;
+};
+
 const formVacio = {
   nombre: "",
   barcode: "",
   precioCompra: "",
+  ganancia: "",
   precioVenta: "",
   stock: "",
   stockMinimo: "5",
 };
 
 const campo = "w-full rounded-lg border border-gray-300 p-3 text-base";
+const redondear = (n: number) => Math.round(n * 100) / 100;
+const num = (s: string) => (s.trim() === "" ? 0 : Number(s) || 0);
 
 export default function Home() {
   const [tab, setTab] = useState<"vender" | "productos">("vender");
@@ -38,6 +51,7 @@ export default function Home() {
   const [cobrando, setCobrando] = useState(false);
   const [camara, setCamara] = useState<"venta" | "codigo" | null>(null);
   const [nuevo, setNuevo] = useState<typeof formVacio | null>(null);
+  const [compra, setCompra] = useState<Compra | null>(null);
   const [guardando, setGuardando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +71,7 @@ export default function Home() {
     setError("");
     setOk("");
     setNuevo(null);
+    setCompra(null);
   }
 
   function agregar(p: Producto) {
@@ -139,6 +154,46 @@ export default function Home() {
     cargar();
   }
 
+  function abrirCompra(p: Producto) {
+    setError("");
+    setOk("");
+    setNuevo(null);
+    setCompra({
+      id: p.id,
+      nombre: p.nombre,
+      ganancia: Number(p.ganancia),
+      cantidad: "",
+      costo: "",
+      precio: "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function guardarCompra(e: React.FormEvent) {
+    e.preventDefault();
+    if (!compra) return;
+    setError("");
+    setGuardando(true);
+    const res = await fetch("/api/productos/" + compra.id + "/compra", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cantidad: compra.cantidad,
+        costo: compra.costo,
+        precioVenta: compra.precio,
+      }),
+    });
+    setGuardando(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "No se pudo guardar la compra");
+      return;
+    }
+    setOk("Compra registrada: " + compra.nombre);
+    setCompra(null);
+    cargar();
+  }
+
   const total =
     Math.round(
       carrito.reduce((s, l) => s + Number(l.producto.precioVenta) * l.cantidad, 0) * 100
@@ -174,6 +229,9 @@ export default function Home() {
     inputRef.current?.focus();
   }
 
+  const etiqueta = "block text-sm text-gray-600";
+  const conMargen = campo + " mt-1";
+
   const formNuevo = nuevo && (
     <form onSubmit={guardar} className="mb-4 space-y-3 rounded-lg border-2 border-green-600 p-4">
       <p className="font-semibold">
@@ -203,42 +261,82 @@ export default function Home() {
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <input
-          className={campo}
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="Precio venta"
-          value={nuevo.precioVenta}
-          onChange={(e) => setNuevo({ ...nuevo, precioVenta: e.target.value })}
-          required
-        />
-        <input
-          className={campo}
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="Precio compra"
-          value={nuevo.precioCompra}
-          onChange={(e) => setNuevo({ ...nuevo, precioCompra: e.target.value })}
-        />
-        <input
-          className={campo}
-          type="number"
-          inputMode="numeric"
-          placeholder="Stock (cuántos hay)"
-          value={nuevo.stock}
-          onChange={(e) => setNuevo({ ...nuevo, stock: e.target.value })}
-          required
-        />
-        <input
-          className={campo}
-          type="number"
-          inputMode="numeric"
-          placeholder="Stock mínimo"
-          value={nuevo.stockMinimo}
-          onChange={(e) => setNuevo({ ...nuevo, stockMinimo: e.target.value })}
-        />
+        <label className={etiqueta}>
+          Costo (lo que pagó)
+          <input
+            className={conMargen}
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={nuevo.precioCompra}
+            onChange={(e) =>
+              setNuevo({
+                ...nuevo,
+                precioCompra: e.target.value,
+                precioVenta: String(redondear(num(e.target.value) + num(nuevo.ganancia))),
+              })
+            }
+          />
+        </label>
+        <label className={etiqueta}>
+          Ganancia por unidad (Bs.)
+          <input
+            className={conMargen}
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={nuevo.ganancia}
+            onChange={(e) =>
+              setNuevo({
+                ...nuevo,
+                ganancia: e.target.value,
+                precioVenta: String(redondear(num(nuevo.precioCompra) + num(e.target.value))),
+              })
+            }
+          />
+        </label>
+        <label className={etiqueta + " col-span-2"}>
+          Precio de venta (se calcula solo)
+          <input
+            className={conMargen}
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={nuevo.precioVenta}
+            onChange={(e) =>
+              setNuevo({
+                ...nuevo,
+                precioVenta: e.target.value,
+                ganancia: String(redondear(num(e.target.value) - num(nuevo.precioCompra))),
+              })
+            }
+            required
+          />
+        </label>
+        <label className={etiqueta}>
+          Stock (cuántos hay)
+          <input
+            className={conMargen}
+            type="number"
+            inputMode="numeric"
+            value={nuevo.stock}
+            onChange={(e) => setNuevo({ ...nuevo, stock: e.target.value })}
+            required
+          />
+        </label>
+        <label className={etiqueta}>
+          Stock mínimo
+          <input
+            className={conMargen}
+            type="number"
+            inputMode="numeric"
+            value={nuevo.stockMinimo}
+            onChange={(e) => setNuevo({ ...nuevo, stockMinimo: e.target.value })}
+          />
+        </label>
       </div>
       <div className="flex gap-2">
         <button
@@ -253,6 +351,76 @@ export default function Home() {
           className="flex-1 rounded-lg bg-green-600 p-3 font-semibold text-white disabled:opacity-50"
         >
           {guardando ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </form>
+  );
+
+  const formCompra = compra && (
+    <form onSubmit={guardarCompra} className="mb-4 space-y-3 rounded-lg border-2 border-blue-600 p-4">
+      <p className="font-semibold">Compré más: {compra.nombre}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className={etiqueta}>
+          Cantidad que compré
+          <input
+            className={conMargen}
+            type="number"
+            inputMode="numeric"
+            value={compra.cantidad}
+            onChange={(e) => setCompra({ ...compra, cantidad: e.target.value })}
+            required
+            autoFocus
+          />
+        </label>
+        <label className={etiqueta}>
+          Costo nuevo (c/u)
+          <input
+            className={conMargen}
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={compra.costo}
+            onChange={(e) =>
+              setCompra({
+                ...compra,
+                costo: e.target.value,
+                precio:
+                  e.target.value === ""
+                    ? ""
+                    : String(redondear(num(e.target.value) + compra.ganancia)),
+              })
+            }
+            required
+          />
+        </label>
+        <label className={etiqueta + " col-span-2"}>
+          Precio de venta sugerido (puedes cambiarlo)
+          <input
+            className={conMargen}
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={compra.precio}
+            onChange={(e) => setCompra({ ...compra, precio: e.target.value })}
+          />
+        </label>
+      </div>
+      <p className="text-sm text-gray-600">
+        Ganancia: Bs. {redondear(num(compra.precio) - num(compra.costo)).toFixed(2)} por unidad
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setCompra(null)}
+          className="flex-1 rounded-lg bg-gray-200 p-3 font-semibold"
+        >
+          Cancelar
+        </button>
+        <button
+          disabled={guardando}
+          className="flex-1 rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:opacity-50"
+        >
+          {guardando ? "Guardando..." : "Guardar compra"}
         </button>
       </div>
     </form>
@@ -309,7 +477,10 @@ export default function Home() {
         {error && <p className="mt-3 text-red-600">{error}</p>}
         {ok && <p className="mt-3 font-semibold text-green-700">{ok}</p>}
 
-        <div className="mt-3">{formNuevo}</div>
+        <div className="mt-3">
+          {formNuevo}
+          {formCompra}
+        </div>
 
         {tab === "vender" ? (
           <>
@@ -372,7 +543,7 @@ export default function Home() {
           </>
         ) : (
           <>
-            {!nuevo && (
+            {!nuevo && !compra && (
               <button
                 onClick={() => setNuevo(formVacio)}
                 className="mb-4 w-full rounded-lg bg-green-600 p-3 text-lg font-semibold text-white"
@@ -384,25 +555,33 @@ export default function Home() {
               {productos.map((p) => {
                 const bajo = p.stock <= p.stockMinimo;
                 return (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div>
-                      <p className="font-semibold">{p.nombre}</p>
-                      <p className="text-sm text-gray-500">
-                        Bs. {Number(p.precioVenta).toFixed(2)}
-                        {p.barcode ? " · " + p.barcode : ""}
-                      </p>
+                  <li key={p.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold">{p.nombre}</p>
+                        <p className="text-sm text-gray-500">
+                          Vende Bs. {Number(p.precioVenta).toFixed(2)} · gana Bs.{" "}
+                          {Number(p.ganancia).toFixed(2)}
+                        </p>
+                        {p.barcode && (
+                          <p className="text-xs text-gray-400">{p.barcode}</p>
+                        )}
+                      </div>
+                      <span
+                        className={
+                          "rounded-full px-3 py-1 text-sm font-semibold " +
+                          (bajo ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")
+                        }
+                      >
+                        {p.stock} u.
+                      </span>
                     </div>
-                    <span
-                      className={
-                        "rounded-full px-3 py-1 text-sm font-semibold " +
-                        (bajo ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")
-                      }
+                    <button
+                      onClick={() => abrirCompra(p)}
+                      className="mt-2 w-full rounded-lg bg-blue-50 p-2 text-sm font-semibold text-blue-700"
                     >
-                      {p.stock} u.
-                    </span>
+                      Compré más
+                    </button>
                   </li>
                 );
               })}

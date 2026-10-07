@@ -13,6 +13,7 @@ model Producto {
   barcode      String?     @unique
   precioCompra Decimal     @default(0) @db.Decimal(10, 2)
   precioVenta  Decimal     @db.Decimal(10, 2)
+  ganancia     Decimal     @default(0) @db.Decimal(10, 2)
   stock        Int         @default(0)
   stockMinimo  Int         @default(5)
   vencimiento  DateTime?
