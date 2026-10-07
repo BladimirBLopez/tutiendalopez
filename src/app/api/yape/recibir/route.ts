@@ -46,10 +46,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No se pudo leer el monto" }, { status: 400 });
   }
 
-  const remitente =
+  const textoAviso = typeof body.texto === "string" ? body.texto : "";
+  const deTexto = textoAviso.match(/^(.*?)\s+te\s+envi/i)?.[1]?.trim();
+  const crudo =
     typeof body.remitente === "string" && body.remitente.trim()
-      ? body.remitente.trim().slice(0, 80)
-      : null;
+      ? body.remitente.trim()
+      : deTexto || "";
+  const remitente = crudo ? crudo.slice(0, 80) : null;
 
   const repetido = await prisma.pagoYape.findFirst({
     where: {
