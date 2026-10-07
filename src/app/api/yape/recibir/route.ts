@@ -36,17 +36,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const raw = await req.text();
   let body: Record<string, unknown> = {};
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    body = JSON.parse(raw) as Record<string, unknown>;
   } catch {}
+  console.log("YAPE RAW:", raw.slice(0, 300));
 
-  const monto = leerMonto(body.monto ?? body.texto);
+  const monto = leerMonto(body.monto ?? body.texto ?? raw);
   if (monto === null || monto <= 0 || monto > 100000) {
     return NextResponse.json({ error: "No se pudo leer el monto" }, { status: 400 });
   }
 
-  const textoAviso = typeof body.texto === "string" ? body.texto : "";
+  const textoAviso = typeof body.texto === "string" ? body.texto : raw;
   const deTexto = textoAviso.match(/^(.*?)\s+te\s+envi/i)?.[1]?.trim();
   const crudo =
     typeof body.remitente === "string" && body.remitente.trim()
