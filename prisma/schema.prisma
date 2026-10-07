@@ -7,10 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Tienda {
+  id      Int             @id @default(autoincrement())
+  nombre  String
+  productos Producto[]
+  ventas    Venta[]
+  rangos    RangoGanancia[]
+}
+
 model Producto {
   id           Int         @id @default(autoincrement())
+  tiendaId     Int         @default(1)
+  tienda       Tienda      @relation(fields: [tiendaId], references: [id])
   nombre       String
-  barcode      String?     @unique
+  barcode      String?
   precioCompra Decimal     @default(0) @db.Decimal(10, 2)
   precioVenta  Decimal     @db.Decimal(10, 2)
   ganancia     Decimal     @default(0) @db.Decimal(10, 2)
@@ -21,6 +31,8 @@ model Producto {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   items        ItemVenta[]
+
+  @@unique([tiendaId, barcode])
 }
 
 model Cliente {
@@ -34,6 +46,8 @@ model Cliente {
 
 model Venta {
   id         Int         @id @default(autoincrement())
+  tiendaId   Int         @default(1)
+  tienda     Tienda      @relation(fields: [tiendaId], references: [id])
   total      Decimal     @db.Decimal(10, 2)
   metodoPago String      @default("efectivo")
   clienteId  Int?
@@ -77,6 +91,8 @@ model Pago {
 
 model RangoGanancia {
   id       Int     @id @default(autoincrement())
+  tiendaId Int     @default(1)
+  tienda   Tienda  @relation(fields: [tiendaId], references: [id])
   desde    Decimal @db.Decimal(10, 2)
   ganancia Decimal @db.Decimal(10, 2)
 }
@@ -87,9 +103,4 @@ model PagoYape {
   remitente String?
   estado    String   @default("pendiente")
   createdAt DateTime @default(now()) @db.Timestamp(3)
-}
-
-model Tienda {
-  id     Int    @id @default(autoincrement())
-  nombre String
 }
