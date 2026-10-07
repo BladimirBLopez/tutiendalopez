@@ -40,7 +40,7 @@ const formVacio = {
   stockMinimo: "5",
 };
 
-const campo = "w-full rounded-lg border border-gray-300 p-3 text-base";
+const campo = "w-full rounded-xl border border-gray-200 bg-white p-3.5 text-base shadow-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100";
 const redondear = (n: number) => Math.round(n * 100) / 100;
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s) || 0);
 
@@ -357,10 +357,10 @@ export default function Home() {
 
   const formCompra = compra && (
     <form onSubmit={guardarCompra} className="mb-4 space-y-3 rounded-lg border-2 border-blue-600 p-4">
-      <p className="font-semibold">Compré más: {compra.nombre}</p>
+      <p className="font-semibold">Agregar stock: {compra.nombre}</p>
       <div className="grid grid-cols-2 gap-3">
         <label className={etiqueta}>
-          Cantidad que compré
+          Cantidad
           <input
             className={conMargen}
             type="number"
@@ -372,7 +372,7 @@ export default function Home() {
           />
         </label>
         <label className={etiqueta}>
-          Costo nuevo (c/u)
+          Costo por unidad
           <input
             className={conMargen}
             type="number"
@@ -393,7 +393,7 @@ export default function Home() {
           />
         </label>
         <label className={etiqueta + " col-span-2"}>
-          Precio de venta sugerido (puedes cambiarlo)
+          Nuevo precio de venta
           <input
             className={conMargen}
             type="number"
@@ -419,7 +419,7 @@ export default function Home() {
           disabled={guardando}
           className="flex-1 rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:opacity-50"
         >
-          {guardando ? "Guardando..." : "Guardar compra"}
+          {guardando ? "Guardando..." : "Guardar stock"}
         </button>
       </div>
     </form>
@@ -433,7 +433,7 @@ export default function Home() {
 
   if (tab === "ganancias") {
     return (
-      <main className="mx-auto max-w-2xl pb-8">
+      <main className="mx-auto max-w-2xl pb-28">
         <BarraApp actual="ganancias" onIr={cambiarTab} onSalir={salir} />
         <MisGanancias />
       </main>
@@ -442,7 +442,7 @@ export default function Home() {
 
   if (tab === "ventas") {
     return (
-      <main className="mx-auto max-w-2xl pb-8">
+      <main className="mx-auto max-w-2xl pb-28">
         <BarraApp actual="ventas" onIr={cambiarTab} onSalir={salir} />
         <ListaVentas />
       </main>
@@ -461,14 +461,14 @@ export default function Home() {
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={alEnter}
             placeholder={
-              tab === "vender" ? "Escribe el nombre o escanea" : "Buscar producto"
+              tab === "vender" ? "Buscar producto o escanear código" : "Buscar producto"
             }
             className={campo}
           />
           {tab === "vender" && (
             <button
               onClick={() => setCamara("venta")}
-              className="rounded-lg bg-gray-800 px-4 text-2xl text-white"
+              className="rounded-xl bg-gray-900 px-4 text-2xl text-white shadow-sm active:scale-95"
             >
               📷
             </button>
@@ -486,8 +486,16 @@ export default function Home() {
           />
         )}
 
-        {error && <p className="mt-3 text-red-600">{error}</p>}
-        {ok && <p className="mt-3 font-semibold text-green-700">{ok}</p>}
+        {error && (
+          <div className="mt-3 rounded-xl bg-red-50 p-3 font-medium text-red-700">
+            ⚠️ {error}
+          </div>
+        )}
+        {ok && (
+          <div className="mt-3 rounded-xl bg-green-50 p-3 font-semibold text-green-700">
+            ✓ {ok}
+          </div>
+        )}
 
         <div className="mt-3">
           {formNuevo}
@@ -502,7 +510,7 @@ export default function Home() {
                   <li key={p.id}>
                     <button
                       onClick={() => agregar(p)}
-                      className="flex w-full items-center justify-between rounded p-2 text-left active:bg-gray-100"
+                      className="flex w-full items-center justify-between rounded-xl p-3 text-left active:bg-green-50"
                     >
                       <span>{p.nombre}</span>
                       <span className="text-sm text-gray-500">
@@ -521,7 +529,7 @@ export default function Home() {
               {carrito.map((l) => (
                 <li
                   key={l.producto.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-3 shadow-sm"
                 >
                   <div>
                     <p className="font-semibold">{l.producto.nombre}</p>
@@ -532,14 +540,14 @@ export default function Home() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => cambiarCantidad(l.producto.id, -1)}
-                      className="h-10 w-10 rounded-full bg-gray-200 text-xl"
+                      className="h-11 w-11 rounded-xl bg-gray-100 text-xl font-bold active:bg-gray-200"
                     >
                       -
                     </button>
                     <span className="w-6 text-center text-lg">{l.cantidad}</span>
                     <button
                       onClick={() => cambiarCantidad(l.producto.id, 1)}
-                      className="h-10 w-10 rounded-full bg-gray-200 text-xl"
+                      className="h-11 w-11 rounded-xl bg-gray-100 text-xl font-bold active:bg-gray-200"
                     >
                       +
                     </button>
@@ -558,7 +566,7 @@ export default function Home() {
             {!nuevo && !compra && (
               <button
                 onClick={() => setNuevo(formVacio)}
-                className="mb-4 w-full rounded-lg bg-green-600 p-3 text-lg font-semibold text-white"
+                className="mb-4 w-full rounded-xl bg-green-600 p-3.5 text-lg font-bold text-white shadow-sm active:scale-[0.99]"
               >
                 + Nuevo producto
               </button>
@@ -567,7 +575,7 @@ export default function Home() {
               {productos.map((p) => {
                 const bajo = p.stock <= p.stockMinimo;
                 return (
-                  <li key={p.id} className="rounded-lg border p-3">
+                  <li key={p.id} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold">{p.nombre}</p>
@@ -614,7 +622,7 @@ export default function Home() {
       </div>
 
       {tab === "vender" && (
-        <div className="fixed inset-x-0 bottom-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-20 z-30 border-t border-gray-200 bg-white p-4 shadow-2xl">
           <div className="mx-auto max-w-2xl space-y-3">
             <div className="flex items-end justify-between">
               <div>
@@ -631,14 +639,14 @@ export default function Home() {
                 disabled={carrito.length === 0}
                 className="flex-1 rounded-xl bg-emerald-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
               >
-                💵 Efectivo
+                💵 Cobrar efectivo
               </button>
               <button
                 onClick={() => setCobro("qr")}
                 disabled={carrito.length === 0}
                 className="flex-1 rounded-xl bg-purple-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
               >
-                📱 QR Yape
+                📱 Cobrar QR
               </button>
             </div>
           </div>

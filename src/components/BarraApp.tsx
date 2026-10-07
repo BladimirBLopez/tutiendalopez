@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 export type Seccion = "vender" | "productos" | "ventas" | "ganancias";
 
 const SECCIONES: { id: Seccion; nombre: string; icono: string }[] = [
-  { id: "vender", nombre: "Vender", icono: "🛒" },
+  { id: "vender", nombre: "Caja", icono: "🛒" },
   { id: "productos", nombre: "Productos", icono: "📦" },
-  { id: "ventas", nombre: "Ventas del día", icono: "📊" },
-  { id: "ganancias", nombre: "Mis ganancias", icono: "💰" },
+  { id: "ventas", nombre: "Ventas", icono: "📊" },
+  { id: "ganancias", nombre: "Ganancias", icono: "💰" },
 ];
 
 export default function BarraApp({
@@ -20,97 +20,77 @@ export default function BarraApp({
   onIr: (s: Seccion) => void;
   onSalir: () => void;
 }) {
-  const [abierto, setAbierto] = useState(false);
   const [tienda, setTienda] = useState("");
 
   useEffect(() => {
-    fetch("/api/tienda")
+    fetch("/api/tienda", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((t) => t && setTienda(t.nombre))
+      .then((t) => {
+        if (t?.nombre) setTienda(t.nombre);
+      })
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = abierto ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [abierto]);
-
-  const titulo = SECCIONES.find((s) => s.id === actual)?.nombre ?? "Tu Tienda López";
-
-  function ir(s: Seccion) {
-    setAbierto(false);
-    onIr(s);
-  }
-
-  function salir() {
-    setAbierto(false);
-    onSalir();
-  }
+  const titulo =
+    SECCIONES.find((s) => s.id === actual)?.nombre ?? "Tu Tienda López";
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-2 bg-green-600 px-2 py-2 text-white shadow">
-        <button
-          onClick={() => setAbierto(true)}
-          aria-label="Abrir menú"
-          className="flex h-12 w-12 items-center justify-center rounded-xl text-3xl active:bg-green-700"
-        >
-          ☰
-        </button>
-        <h1 className="text-xl font-bold">{titulo}</h1>
-        {tienda && (
-          <span className="ml-auto mr-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
-            {tienda}
-          </span>
-        )}
+      <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-600 text-base font-black text-white">
+            TL
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-extrabold uppercase tracking-wider text-green-700">
+              {tienda || "Tu Tienda López"}
+            </p>
+            <h1 className="truncate text-xl font-extrabold text-gray-900">
+              {titulo}
+            </h1>
+          </div>
+
+          <button
+            onClick={onSalir}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-xl active:bg-gray-200"
+          >
+            🚪
+          </button>
+        </div>
       </header>
 
-      {abierto && (
-        <div className="fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setAbierto(false)}
-          />
-          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-white shadow-xl">
-            <div className="flex items-center gap-3 bg-green-600 p-4 text-white">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-lg font-bold text-green-700">
-                TL
-              </div>
-              <div className="text-lg font-bold leading-tight">{tienda || "Tu Tienda López"}</div>
-            </div>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="mx-auto flex max-w-2xl pb-[max(0.3rem,env(safe-area-inset-bottom))]">
+          {SECCIONES.map((s) => {
+            const activo = actual === s.id;
 
-            <nav className="flex-1 p-2">
-              {SECCIONES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => ir(s.id)}
+            return (
+              <button
+                key={s.id}
+                onClick={() => onIr(s.id)}
+                aria-current={activo ? "page" : undefined}
+                className={
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-bold " +
+                  (activo ? "text-green-700" : "text-gray-500")
+                }
+              >
+                <span
                   className={
-                    "flex w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-lg font-semibold " +
-                    (actual === s.id
-                      ? "bg-green-100 text-green-800"
-                      : "text-gray-700 active:bg-gray-100")
+                    "flex h-9 w-12 items-center justify-center rounded-2xl text-xl " +
+                    (activo ? "bg-green-100" : "")
                   }
                 >
-                  <span className="text-2xl">{s.icono}</span>
-                  {s.nombre}
-                </button>
-              ))}
-            </nav>
-
-            <div className="border-t p-2">
-              <button
-                onClick={salir}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-lg font-semibold text-red-600 active:bg-red-50"
-              >
-                <span className="text-2xl">🚪</span>
-                Cerrar sesión
+                  {s.icono}
+                </span>
+                <span className="truncate">{s.nombre}</span>
               </button>
-            </div>
-          </aside>
+            );
+          })}
         </div>
-      )}
+      </nav>
     </>
   );
 }
