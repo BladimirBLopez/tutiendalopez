@@ -7,6 +7,7 @@ import DetalleProducto from "@/components/DetalleProducto";
 import ListaVentas from "@/components/ListaVentas";
 import BarraApp from "@/components/BarraApp";
 import MisGanancias from "@/components/MisGanancias";
+import { ScanBarcode, Banknote, QrCode, Trash2 } from "lucide-react";
 
 type Producto = {
   id: number;
@@ -262,7 +263,7 @@ export default function Home() {
           onClick={() => setCamara("codigo")}
           className="rounded-lg bg-gray-800 px-4 text-xl text-white"
         >
-          📷
+          <ScanBarcode size={24} strokeWidth={2.2} />
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -476,7 +477,7 @@ export default function Home() {
               onClick={() => setCamara("venta")}
               className="rounded-xl bg-gray-900 px-4 text-2xl text-white shadow-sm active:scale-95"
             >
-              📷
+              <ScanBarcode size={24} strokeWidth={2.2} />
             </button>
           )}
         </div>
@@ -646,16 +647,18 @@ export default function Home() {
               <button
                 onClick={() => setCobro("efectivo")}
                 disabled={carrito.length === 0}
-                className="flex-1 rounded-xl bg-emerald-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
               >
-                💵 Cobrar efectivo
+                <Banknote size={22} strokeWidth={2.3} />
+                <span>Cobrar efectivo</span>
               </button>
               <button
                 onClick={() => setCobro("qr")}
                 disabled={carrito.length === 0}
-                className="flex-1 rounded-xl bg-purple-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-600 p-4 text-lg font-bold text-white active:scale-95 disabled:opacity-40"
               >
-                📱 Cobrar QR
+                <QrCode size={22} strokeWidth={2.3} />
+                <span>Cobrar QR</span>
               </button>
             </div>
           </div>
@@ -790,9 +793,10 @@ export default function Home() {
                 setEditarCantidad(null);
                 setTimeout(() => inputRef.current?.focus(), 50);
               }}
-              className="mb-3 w-full rounded-2xl bg-red-50 p-3.5 font-bold text-red-700 active:bg-red-100"
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 p-3.5 font-bold text-red-700 active:bg-red-100"
             >
-              🗑 Quitar producto
+              <Trash2 size={20} strokeWidth={2.2} />
+              <span>Quitar producto</span>
             </button>
 
             <button

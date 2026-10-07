@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Banknote, QrCode, Check } from "lucide-react";
 
 type PagoYape = {
   id: number;
@@ -117,7 +118,7 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
         {estado === "listo" ? (
           <div className="py-8 text-center">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-5xl text-green-600">
-              ✓
+              <Check size={48} strokeWidth={2.6} />
             </div>
             <p className="mt-4 text-2xl font-bold">
               {modo === "qr" ? "¡Pago recibido!" : "¡Venta registrada!"}
@@ -134,7 +135,17 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
           <>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">
-                {modo === "qr" ? "📱 Cobro por QR" : "💵 Cobro en efectivo"}
+                {modo === "qr" ? (
+                  <span className="flex items-center gap-2">
+                    <QrCode size={20} strokeWidth={2.3} />
+                    Cobro por QR
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Banknote size={20} strokeWidth={2.3} />
+                    Cobro en efectivo
+                  </span>
+                )}
               </h2>
               <button
                 onClick={onCerrar}
