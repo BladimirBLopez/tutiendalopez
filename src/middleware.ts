@@ -4,7 +4,10 @@ import { NOMBRE_COOKIE, verificarToken } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const esPublica = pathname === "/login" || pathname === "/api/login";
+  const esPublica =
+    pathname === "/login" ||
+    pathname === "/api/login" ||
+    pathname === "/api/yape/recibir";
   const valida = await verificarToken(req.cookies.get(NOMBRE_COOKIE)?.value);
 
   if (esPublica) return NextResponse.next();

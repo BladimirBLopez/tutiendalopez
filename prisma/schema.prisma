@@ -80,3 +80,11 @@ model RangoGanancia {
   desde    Decimal @db.Decimal(10, 2)
   ganancia Decimal @db.Decimal(10, 2)
 }
+
+model PagoYape {
+  id        Int      @id @default(autoincrement())
+  monto     Decimal  @db.Decimal(10, 2)
+  remitente String?
+  estado    String   @default("pendiente")
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+}
