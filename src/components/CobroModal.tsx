@@ -91,7 +91,7 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
         const coincide = recientes
           .filter((p) => Math.abs(p.monto - total) < 0.005)
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
-        if (coincide) confirmarFn.current(coincide.id, coincide.remitente ?? "Yape");
+        if (coincide) confirmarFn.current(coincide.id, coincide.remitente ?? "Pago QR");
       } catch {
         // sin conexión: reintenta en el próximo ciclo
       }
@@ -134,7 +134,7 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
           <>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">
-                {modo === "qr" ? "📱 Cobro con QR Yape" : "💵 Cobro en efectivo"}
+                {modo === "qr" ? "📱 Cobro por QR" : "💵 Cobro en efectivo"}
               </h2>
               <button
                 onClick={onCerrar}
@@ -156,7 +156,7 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src="/qr-yape.png"
-                    alt="QR Yape"
+                    alt="QR de pago"
                     onError={() => setHayQr(false)}
                     className="mx-auto h-56 w-56 rounded-2xl border object-contain"
                   />
@@ -167,7 +167,7 @@ export default function CobroModal({ modo, total: totalInicial, onConfirmar, onC
                     <span className="relative inline-flex h-3 w-3 rounded-full bg-purple-600" />
                   </span>
                   <span className="font-semibold">
-                    {estado === "guardando" ? "Registrando venta..." : "Esperando pago Yape..."}
+                    {estado === "guardando" ? "Registrando venta..." : "Esperando pago QR..."}
                   </span>
                 </div>
                 {otros.length > 0 && (
