@@ -6,6 +6,7 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import DetalleProducto from "@/components/DetalleProducto";
 import ListaVentas from "@/components/ListaVentas";
 import BarraApp from "@/components/BarraApp";
+import MisGanancias from "@/components/MisGanancias";
 
 type Producto = {
   id: number;
@@ -44,7 +45,7 @@ const redondear = (n: number) => Math.round(n * 100) / 100;
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s) || 0);
 
 export default function Home() {
-  const [tab, setTab] = useState<"vender" | "productos" | "ventas">("vender");
+  const [tab, setTab] = useState<"vender" | "productos" | "ventas" | "ganancias">("vender");
   const [q, setQ] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
   const [carrito, setCarrito] = useState<Linea[]>([]);
@@ -68,7 +69,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [cargar]);
 
-  function cambiarTab(t: "vender" | "productos" | "ventas") {
+  function cambiarTab(t: "vender" | "productos" | "ventas" | "ganancias") {
     setTab(t);
     setQ("");
     setError("");
@@ -428,6 +429,15 @@ export default function Home() {
     if (!confirm("¿Cerrar sesión?")) return;
     await fetch("/api/login", { method: "DELETE" });
     window.location.href = "/login";
+  }
+
+  if (tab === "ganancias") {
+    return (
+      <main className="mx-auto max-w-2xl pb-8">
+        <BarraApp actual="ganancias" onIr={cambiarTab} onSalir={salir} />
+        <MisGanancias />
+      </main>
+    );
   }
 
   if (tab === "ventas") {

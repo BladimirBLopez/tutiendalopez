@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-export type Seccion = "vender" | "productos" | "ventas";
+export type Seccion = "vender" | "productos" | "ventas" | "ganancias";
 
 const SECCIONES: { id: Seccion; nombre: string; icono: string }[] = [
   { id: "vender", nombre: "Vender", icono: "🛒" },
   { id: "productos", nombre: "Productos", icono: "📦" },
   { id: "ventas", nombre: "Ventas del día", icono: "📊" },
+  { id: "ganancias", nombre: "Mis ganancias", icono: "💰" },
 ];
 
 export default function BarraApp({
