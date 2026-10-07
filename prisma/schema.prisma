@@ -74,3 +74,9 @@ model Pago {
   monto     Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
 }
+
+model RangoGanancia {
+  id       Int     @id @default(autoincrement())
+  desde    Decimal @db.Decimal(10, 2)
+  ganancia Decimal @db.Decimal(10, 2)
+}
