@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import DetalleProducto from "@/components/DetalleProducto";
 
 type Producto = {
   id: number;
@@ -52,6 +53,7 @@ export default function Home() {
   const [camara, setCamara] = useState<"venta" | "codigo" | null>(null);
   const [nuevo, setNuevo] = useState<typeof formVacio | null>(null);
   const [compra, setCompra] = useState<Compra | null>(null);
+  const [detalle, setDetalle] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -576,12 +578,20 @@ export default function Home() {
                         {p.stock} u.
                       </span>
                     </div>
-                    <button
-                      onClick={() => abrirCompra(p)}
-                      className="mt-2 w-full rounded-lg bg-blue-50 p-2 text-sm font-semibold text-blue-700"
-                    >
-                      Compré más
-                    </button>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => setDetalle(p.id)}
+                        className="flex-1 rounded-lg bg-gray-100 p-2 text-sm font-semibold text-gray-700"
+                      >
+                        Ver detalles
+                      </button>
+                      <button
+                        onClick={() => abrirCompra(p)}
+                        className="flex-1 rounded-lg bg-blue-50 p-2 text-sm font-semibold text-blue-700"
+                      >
+                        Compré más
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -654,6 +664,18 @@ export default function Home() {
             </button>
           </div>
         </div>
+      )}
+      {detalle !== null && (
+        <DetalleProducto
+          id={detalle}
+          onClose={() => setDetalle(null)}
+          onCambio={cargar}
+          onCompra={() => {
+            const p = productos.find((x) => x.id === detalle);
+            setDetalle(null);
+            if (p) abrirCompra(p);
+          }}
+        />
       )}
     </main>
   );
