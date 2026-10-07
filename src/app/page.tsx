@@ -56,6 +56,7 @@ export default function Home() {
   const [nuevo, setNuevo] = useState<typeof formVacio | null>(null);
   const [compra, setCompra] = useState<Compra | null>(null);
   const [detalle, setDetalle] = useState<number | null>(null);
+  const [editarCantidad, setEditarCantidad] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -197,6 +198,11 @@ export default function Home() {
     setCompra(null);
     cargar();
   }
+
+  const lineaEditada =
+    editarCantidad !== null
+      ? carrito.find((l) => l.producto.id === editarCantidad) ?? null
+      : null;
 
   const total =
     Math.round(
@@ -529,29 +535,32 @@ export default function Home() {
               {carrito.map((l) => (
                 <li
                   key={l.producto.id}
-                  className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-3 shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
-                  <div>
-                    <p className="font-semibold">{l.producto.nombre}</p>
-                    <p className="text-sm text-gray-500">
-                      Bs. {(Number(l.producto.precioVenta) * l.cantidad).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => cambiarCantidad(l.producto.id, -1)}
-                      className="h-11 w-11 rounded-xl bg-gray-100 text-xl font-bold active:bg-gray-200"
-                    >
-                      -
-                    </button>
-                    <span className="w-6 text-center text-lg">{l.cantidad}</span>
-                    <button
-                      onClick={() => cambiarCantidad(l.producto.id, 1)}
-                      className="h-11 w-11 rounded-xl bg-gray-100 text-xl font-bold active:bg-gray-200"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditarCantidad(l.producto.id)}
+                    className="flex w-full items-center justify-between gap-3 p-4 text-left active:bg-gray-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-bold text-gray-900">
+                        {l.producto.nombre}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {l.cantidad} {l.cantidad === 1 ? "unidad" : "unidades"} · Bs.{" "}
+                        {Number(l.producto.precioVenta).toFixed(2)} c/u
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="text-lg font-extrabold tabular-nums text-gray-900">
+                        Bs. {(Number(l.producto.precioVenta) * l.cantidad).toFixed(2)}
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-green-700">
+                        Cambiar cantidad ›
+                      </p>
+                    </div>
+                  </button>
                 </li>
               ))}
               {carrito.length === 0 && !q.trim() && (
@@ -652,6 +661,154 @@ export default function Home() {
           </div>
         </div>
       )}
+      {lineaEditada && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+          onClick={() => {
+            setEditarCantidad(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold uppercase tracking-wide text-green-700">
+                  Editar cantidad
+                </p>
+                <h2 className="mt-1 truncate text-2xl font-extrabold text-gray-900">
+                  {lineaEditada.producto.nombre}
+                </h2>
+                <p className="mt-1 text-gray-500">
+                  Bs. {Number(lineaEditada.producto.precioVenta).toFixed(2)} por unidad
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditarCantidad(null);
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center gap-6 rounded-2xl bg-gray-50 p-5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (lineaEditada.cantidad === 1) {
+                    if (
+                      confirm(
+                        "¿Quitar " +
+                          lineaEditada.producto.nombre +
+                          " de la venta?"
+                      )
+                    ) {
+                      setCarrito((prev) =>
+                        prev.filter(
+                          (l) => l.producto.id !== lineaEditada.producto.id
+                        )
+                      );
+                      setEditarCantidad(null);
+                      setTimeout(() => inputRef.current?.focus(), 50);
+                    }
+                    return;
+                  }
+
+                  cambiarCantidad(lineaEditada.producto.id, -1);
+                }}
+                className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-4xl font-bold text-gray-800 shadow-sm ring-1 ring-gray-200 active:scale-95"
+              >
+                −
+              </button>
+
+              <div className="min-w-20 text-center">
+                <p className="text-5xl font-black tabular-nums text-gray-900">
+                  {lineaEditada.cantidad}
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {lineaEditada.cantidad === 1 ? "unidad" : "unidades"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  lineaEditada.cantidad >= lineaEditada.producto.stock
+                }
+                onClick={() =>
+                  cambiarCantidad(lineaEditada.producto.id, 1)
+                }
+                className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-600 text-4xl font-bold text-white shadow-sm active:scale-95 disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                +
+              </button>
+            </div>
+
+            {lineaEditada.cantidad >= lineaEditada.producto.stock && (
+              <p className="mt-3 text-center text-sm font-semibold text-amber-700">
+                Stock disponible: {lineaEditada.producto.stock}
+              </p>
+            )}
+
+            <div className="my-5 flex items-center justify-between rounded-2xl bg-green-50 p-4">
+              <span className="font-semibold text-green-900">
+                Subtotal
+              </span>
+              <span className="text-2xl font-extrabold tabular-nums text-green-800">
+                Bs.{" "}
+                {(
+                  Number(lineaEditada.producto.precioVenta) *
+                  lineaEditada.cantidad
+                ).toFixed(2)}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  !confirm(
+                    "¿Quitar " +
+                      lineaEditada.producto.nombre +
+                      " de la venta?"
+                  )
+                )
+                  return;
+
+                setCarrito((prev) =>
+                  prev.filter(
+                    (l) => l.producto.id !== lineaEditada.producto.id
+                  )
+                );
+                setEditarCantidad(null);
+                setTimeout(() => inputRef.current?.focus(), 50);
+              }}
+              className="mb-3 w-full rounded-2xl bg-red-50 p-3.5 font-bold text-red-700 active:bg-red-100"
+            >
+              🗑 Quitar producto
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEditarCantidad(null);
+                setTimeout(() => inputRef.current?.focus(), 50);
+              }}
+              className="w-full rounded-2xl bg-green-600 p-4 text-xl font-extrabold text-white shadow-sm active:scale-[0.99]"
+            >
+              Listo · seguir agregando
+            </button>
+          </div>
+        </div>
+      )}
+
       {cobro !== null && (
         <CobroModal
           key={cobro}
