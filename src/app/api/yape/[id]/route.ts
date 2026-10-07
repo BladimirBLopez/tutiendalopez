@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 // Descartar un pago Yape (no corresponde a ninguna venta)
 export async function DELETE(
@@ -7,11 +8,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const id = Number((await params).id);
+  const tiendaId = await tiendaActual();
   if (!Number.isInteger(id)) {
     return NextResponse.json({ error: "Id inválido" }, { status: 400 });
   }
   const r = await prisma.pagoYape.updateMany({
-    where: { id, estado: "pendiente" },
+    where: { id, tiendaId, estado: "pendiente" },
     data: { estado: "descartado" },
   });
   if (r.count === 0) {

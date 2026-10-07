@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { NOMBRE_COOKIE, DURACION_SEGUNDOS, crearToken } from "@/lib/auth";
 
+const TIENDAS = [1, 2];
+
 function iguales(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -10,9 +12,14 @@ function iguales(a: string, b: string): boolean {
   return diff === 0;
 }
 
+function claveDe(id: number): string {
+  const c = process.env["APP_PASSWORD_" + id];
+  if (c) return c;
+  return id === 1 ? process.env.APP_PASSWORD ?? "" : "";
+}
+
 export async function POST(req: Request) {
-  const esperada = process.env.APP_PASSWORD;
-  if (!esperada || !process.env.AUTH_SECRET) {
+  if (!process.env.AUTH_SECRET) {
     return NextResponse.json(
       { error: "Falta configurar el acceso en el servidor" },
       { status: 500 }
@@ -25,12 +32,17 @@ export async function POST(req: Request) {
     password = String(body?.password ?? "");
   } catch {}
 
-  if (!iguales(password, esperada)) {
+  const tiendaId = TIENDAS.find((id) => {
+    const esperada = claveDe(id);
+    return esperada !== "" && iguales(password, esperada);
+  });
+
+  if (!tiendaId) {
     return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401 });
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(NOMBRE_COOKIE, await crearToken(), {
+  res.cookies.set(NOMBRE_COOKIE, await crearToken(tiendaId), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

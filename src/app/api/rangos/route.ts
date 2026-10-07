@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 export async function GET() {
+  const tiendaId = await tiendaActual();
   const rangos = await prisma.rangoGanancia.findMany({
+    where: { tiendaId },
     orderBy: { desde: "asc" },
     select: { desde: true, ganancia: true },
   });
@@ -10,6 +13,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  const tiendaId = await tiendaActual();
   let body: unknown;
   try {
     body = await req.json();
@@ -38,8 +42,8 @@ export async function PUT(req: Request) {
   }
 
   await prisma.$transaction([
-    prisma.rangoGanancia.deleteMany(),
-    prisma.rangoGanancia.createMany({ data: rangos }),
+    prisma.rangoGanancia.deleteMany({ where: { tiendaId } }),
+    prisma.rangoGanancia.createMany({ data: rangos.map((r) => ({ ...r, tiendaId })) }),
   ]);
 
   return NextResponse.json({ ok: true });

@@ -26,13 +26,17 @@ function leerMonto(v: unknown): number | null {
 }
 
 export async function POST(req: Request) {
-  const clave = process.env.YAPE_KEY;
-  if (!clave) {
+  if (!process.env.YAPE_KEY && !process.env.YAPE_KEY_1 && !process.env.YAPE_KEY_2) {
     return NextResponse.json({ error: "Falta configurar YAPE_KEY" }, { status: 500 });
   }
 
+  // Cada tienda tiene su propia clave: la clave decide a qué tienda pertenece el pago
   const enviada = req.headers.get("x-yape-key") ?? "";
-  if (!iguales(enviada, clave)) {
+  const tiendaId = [1, 2].find((id) => {
+    const c = process.env["YAPE_KEY_" + id] || (id === 1 ? process.env.YAPE_KEY : "");
+    return !!c && iguales(enviada, c);
+  });
+  if (!tiendaId) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -57,6 +61,7 @@ export async function POST(req: Request) {
 
   const repetido = await prisma.pagoYape.findFirst({
     where: {
+      tiendaId,
       monto,
       remitente,
       createdAt: { gte: new Date(Date.now() - 20000) },
@@ -66,6 +71,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, repetido: true });
   }
 
-  await prisma.pagoYape.create({ data: { monto, remitente } });
+  await prisma.pagoYape.create({ data: { tiendaId, monto, remitente } });
   return NextResponse.json({ ok: true });
 }

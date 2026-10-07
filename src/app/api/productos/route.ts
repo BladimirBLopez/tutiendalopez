@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const tiendaId = await tiendaActual();
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
 
   const productos = await prisma.producto.findMany({
     where: {
+      tiendaId,
       activo: true,
       ...(q
         ? {
@@ -27,6 +30,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const tiendaId = await tiendaActual();
   const body = await req.json();
   const nombre = String(body.nombre ?? "").trim();
   const precioVenta = Number(body.precioVenta);
@@ -46,6 +50,7 @@ export async function POST(req: Request) {
   try {
     const producto = await prisma.producto.create({
       data: {
+        tiendaId,
         nombre,
         barcode,
         precioVenta,

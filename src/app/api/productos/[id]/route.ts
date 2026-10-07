@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, { params }: Ctx) {
+  const tiendaId = await tiendaActual();
   const { id } = await params;
   const productoId = Number(id);
   if (!Number.isInteger(productoId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const producto = await prisma.producto.findUnique({ where: { id: productoId } });
+  const producto = await prisma.producto.findFirst({ where: { id: productoId, tiendaId } });
   if (!producto || !producto.activo) {
     return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
   }
@@ -46,6 +48,7 @@ export async function GET(_req: Request, { params }: Ctx) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const tiendaId = await tiendaActual();
   const { id } = await params;
   const productoId = Number(id);
   if (!Number.isInteger(productoId)) {
@@ -100,7 +103,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   try {
     const actualizado = await prisma.producto.update({
-      where: { id: productoId },
+      where: { id: productoId, tiendaId },
       data,
     });
     return NextResponse.json(actualizado);
@@ -117,6 +120,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
+  const tiendaId = await tiendaActual();
   const { id } = await params;
   const productoId = Number(id);
   if (!Number.isInteger(productoId)) {
@@ -127,12 +131,12 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     const ventas = await prisma.itemVenta.count({ where: { productoId } });
 
     if (ventas === 0) {
-      await prisma.producto.delete({ where: { id: productoId } });
+      await prisma.producto.delete({ where: { id: productoId, tiendaId } });
       return NextResponse.json({ ok: true, archivado: false });
     }
 
     await prisma.producto.update({
-      where: { id: productoId },
+      where: { id: productoId, tiendaId },
       data: { activo: false, barcode: null },
     });
     return NextResponse.json({ ok: true, archivado: true });

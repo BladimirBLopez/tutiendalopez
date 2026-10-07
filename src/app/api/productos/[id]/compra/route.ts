@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const tiendaId = await tiendaActual();
   const productoId = Number(id);
   const body = await req.json().catch(() => ({}));
 
@@ -22,7 +24,7 @@ export async function POST(
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  const p = await prisma.producto.findUnique({ where: { id: productoId } });
+  const p = await prisma.producto.findFirst({ where: { id: productoId, tiendaId } });
   if (!p) {
     return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
   }
@@ -40,7 +42,7 @@ export async function POST(
   const ganancia = redondear(precioVenta - costo);
 
   const actualizado = await prisma.producto.update({
-    where: { id: productoId },
+    where: { id: productoId, tiendaId },
     data: {
       stock: { increment: cantidad },
       precioCompra: costo,

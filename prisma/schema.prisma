@@ -13,6 +13,7 @@ model Tienda {
   productos Producto[]
   ventas    Venta[]
   rangos    RangoGanancia[]
+  pagosYape PagoYape[]
 }
 
 model Producto {
@@ -99,6 +100,8 @@ model RangoGanancia {
 
 model PagoYape {
   id        Int      @id @default(autoincrement())
+  tiendaId  Int      @default(1)
+  tienda    Tienda   @relation(fields: [tiendaId], references: [id])
   monto     Decimal  @db.Decimal(10, 2)
   remitente String?
   estado    String   @default("pendiente")

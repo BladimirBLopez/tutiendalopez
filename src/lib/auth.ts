@@ -19,26 +19,34 @@ async function firmar(datos: string): Promise<string> {
     .join("");
 }
 
-export async function crearToken(): Promise<string> {
+export async function crearToken(tiendaId: number): Promise<string> {
   const exp = String(Date.now() + DURACION_SEGUNDOS * 1000);
-  return `${exp}.${await firmar(exp)}`;
+  const datos = `${tiendaId}.${exp}`;
+  return `${datos}.${await firmar(datos)}`;
 }
 
-export async function verificarToken(token?: string | null): Promise<boolean> {
+export async function leerSesion(token?: string | null): Promise<number | null> {
   try {
-    if (!token) return false;
-    const [exp, firma] = token.split(".");
-    if (!exp || !firma) return false;
+    if (!token) return null;
+    const partes = token.split(".");
+    if (partes.length !== 3) return null;
+    const [t, exp, firma] = partes;
+    const tiendaId = Number(t);
     const n = Number(exp);
-    if (!Number.isFinite(n) || n < Date.now()) return false;
-    const esperada = await firmar(exp);
-    if (esperada.length !== firma.length) return false;
+    if (!Number.isInteger(tiendaId) || tiendaId <= 0) return null;
+    if (!Number.isFinite(n) || n < Date.now()) return null;
+    const esperada = await firmar(`${t}.${exp}`);
+    if (esperada.length !== firma.length) return null;
     let diff = 0;
     for (let i = 0; i < esperada.length; i++) {
       diff |= esperada.charCodeAt(i) ^ firma.charCodeAt(i);
     }
-    return diff === 0;
+    return diff === 0 ? tiendaId : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function verificarToken(token?: string | null): Promise<boolean> {
+  return (await leerSesion(token)) !== null;
 }

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tiendaActual } from "@/lib/tienda";
 
 export const dynamic = "force-dynamic";
 
 class VentaError extends Error {}
 
 export async function POST(req: Request) {
+  const tiendaId = await tiendaActual();
   const body = await req.json().catch(() => ({}));
   const metodoPago = body.metodoPago === "qr" ? "qr" : "efectivo";
   const pagoYapeId =
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
     const venta = await prisma.$transaction(async (tx) => {
       const ids = [...cantidades.keys()];
       const productos = await tx.producto.findMany({
-        where: { id: { in: ids }, activo: true },
+        where: { id: { in: ids }, activo: true, tiendaId },
       });
       if (productos.length !== ids.length) {
         throw new VentaError("Algún producto ya no existe");
@@ -56,17 +58,17 @@ export async function POST(req: Request) {
       });
 
       const creada = await tx.venta.create({
-        data: { total, metodoPago, items: { create: items } },
+        data: { tiendaId, total, metodoPago, items: { create: items } },
       });
 
       // Marca el pago Yape como usado (una sola venta por pago)
       if (pagoYapeId !== null) {
-        const pago = await tx.pagoYape.findUnique({ where: { id: pagoYapeId } });
+        const pago = await tx.pagoYape.findFirst({ where: { id: pagoYapeId, tiendaId } });
         if (!pago || Math.abs(Number(pago.monto) - total) > 0.005) {
           throw new VentaError("El monto del pago Yape no coincide con el total");
         }
         const usado = await tx.pagoYape.updateMany({
-          where: { id: pagoYapeId, estado: "pendiente" },
+          where: { id: pagoYapeId, tiendaId, estado: "pendiente" },
           data: { estado: "usado" },
         });
         if (usado.count === 0) {
@@ -99,6 +101,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  const tiendaId = await tiendaActual();
   const { searchParams } = new URL(req.url);
   const fecha = searchParams.get("fecha") ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
@@ -113,7 +116,7 @@ export async function GET(req: Request) {
   const hasta = new Date(desde.getTime() + 24 * 60 * 60 * 1000);
 
   const ventas = await prisma.venta.findMany({
-    where: { createdAt: { gte: desde, lt: hasta } },
+    where: { tiendaId, createdAt: { gte: desde, lt: hasta } },
     orderBy: { createdAt: "desc" },
     include: {
       items: { include: { producto: { select: { nombre: true } } } },
