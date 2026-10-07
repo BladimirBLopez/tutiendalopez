@@ -8,6 +8,12 @@ class VentaError extends Error {}
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const metodoPago = body.metodoPago === "qr" ? "qr" : "efectivo";
+  const pagoYapeId =
+    metodoPago === "qr" &&
+    body.pagoYapeId != null &&
+    Number.isInteger(Number(body.pagoYapeId))
+      ? Number(body.pagoYapeId)
+      : null;
 
   // Unir líneas repetidas y validar
   const cantidades = new Map<number, number>();
@@ -48,6 +54,17 @@ export async function POST(req: Request) {
       const creada = await tx.venta.create({
         data: { total, metodoPago, items: { create: items } },
       });
+
+      // Marca el pago Yape como usado (una sola venta por pago)
+      if (pagoYapeId !== null) {
+        const usado = await tx.pagoYape.updateMany({
+          where: { id: pagoYapeId, estado: "pendiente" },
+          data: { estado: "usado" },
+        });
+        if (usado.count === 0) {
+          throw new VentaError("Ese pago Yape ya fue usado");
+        }
+      }
 
       // Descuenta stock solo si alcanza (seguro ante ventas simultáneas)
       for (const p of productos) {

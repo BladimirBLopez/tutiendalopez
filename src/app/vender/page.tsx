@@ -13,6 +13,13 @@ type Producto = {
 
 type Linea = { producto: Producto; cantidad: number };
 
+type PagoYape = {
+  id: number;
+  monto: number;
+  remitente: string | null;
+  createdAt: string;
+};
+
 export default function VenderPage() {
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
@@ -24,6 +31,29 @@ export default function VenderPage() {
   const [cobrando, setCobrando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [camara, setCamara] = useState(false);
+  const [yapes, setYapes] = useState<PagoYape[]>([]);
+  const [yapeSel, setYapeSel] = useState<number | null>(null);
+
+  async function cargarYapes() {
+    const res = await fetch("/api/yape", { cache: "no-store" });
+    if (res.ok) setYapes(await res.json());
+  }
+
+  useEffect(() => {
+    if (metodo !== "qr") {
+      setYapeSel(null);
+      return;
+    }
+    cargarYapes();
+    const t = setInterval(cargarYapes, 4000);
+    return () => clearInterval(t);
+  }, [metodo]);
+
+  async function descartarYape(id: number) {
+    await fetch(`/api/yape/${id}`, { method: "DELETE" });
+    if (yapeSel === id) setYapeSel(null);
+    cargarYapes();
+  }
 
   useEffect(() => {
     if (!q.trim()) {
@@ -117,6 +147,7 @@ export default function VenderPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         metodoPago: metodo,
+        pagoYapeId: metodo === "qr" ? yapeSel : null,
         items: carrito.map((l) => ({
           productoId: l.producto.id,
           cantidad: l.cantidad,
@@ -132,6 +163,8 @@ export default function VenderPage() {
     setOk(`Venta registrada: Bs. ${total.toFixed(2)}`);
     setCarrito([]);
     setRecibido("");
+    setYapeSel(null);
+    if (metodo === "qr") cargarYapes();
     inputRef.current?.focus();
   }
 
@@ -261,6 +294,58 @@ export default function VenderPage() {
                   {vuelto < 0 ? "Falta" : "Vuelto"} Bs. {Math.abs(vuelto).toFixed(2)}
                 </span>
               )}
+            </div>
+          )}
+
+          {metodo === "qr" && (
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border p-2">
+              {yapes.length === 0 && (
+                <p className="py-2 text-center text-sm text-gray-500">
+                  Esperando pago Yape...
+                </p>
+              )}
+              {yapes.map((y) => {
+                const coincide = Math.abs(y.monto - total) < 0.005;
+                const sel = yapeSel === y.id;
+                return (
+                  <div
+                    key={y.id}
+                    className={`flex items-center gap-2 rounded p-2 ${
+                      sel ? "bg-green-100 ring-2 ring-green-600" : "bg-gray-50"
+                    }`}
+                  >
+                    <button
+                      onClick={() => setYapeSel(sel ? null : y.id)}
+                      className="flex-1 text-left"
+                    >
+                      <span className="font-semibold">Bs. {y.monto.toFixed(2)}</span>
+                      <span className="ml-2 text-sm text-gray-600">
+                        {y.remitente ?? "Yape"} ·{" "}
+                        {new Date(y.createdAt).toLocaleTimeString("es-BO", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {total > 0 && (
+                        <span
+                          className={`ml-2 text-sm font-semibold ${
+                            coincide ? "text-green-700" : "text-amber-600"
+                          }`}
+                        >
+                          {coincide ? "✓ coincide" : "≠ total"}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => descartarYape(y.id)}
+                      className="h-8 w-8 rounded-full bg-gray-200 text-sm"
+                      aria-label="Descartar"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
