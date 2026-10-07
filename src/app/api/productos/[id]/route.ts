@@ -115,3 +115,32 @@ export async function PATCH(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: Request, { params }: Ctx) {
+  const { id } = await params;
+  const productoId = Number(id);
+  if (!Number.isInteger(productoId)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  try {
+    const ventas = await prisma.itemVenta.count({ where: { productoId } });
+
+    if (ventas === 0) {
+      await prisma.producto.delete({ where: { id: productoId } });
+      return NextResponse.json({ ok: true, archivado: false });
+    }
+
+    await prisma.producto.update({
+      where: { id: productoId },
+      data: { activo: false, barcode: null },
+    });
+    return NextResponse.json({ ok: true, archivado: true });
+  } catch (e: unknown) {
+    const code = typeof e === "object" && e && "code" in e ? (e as { code: string }).code : "";
+    if (code === "P2025") {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+    return NextResponse.json({ error: "No se pudo eliminar" }, { status: 500 });
+  }
+}
