@@ -41,7 +41,6 @@ export async function POST(req: Request) {
   try {
     body = JSON.parse(raw) as Record<string, unknown>;
   } catch {}
-  console.log("YAPE RAW:", raw.slice(0, 300));
 
   const monto = leerMonto(body.monto ?? body.texto ?? raw);
   if (monto === null || monto <= 0 || monto > 100000) {
