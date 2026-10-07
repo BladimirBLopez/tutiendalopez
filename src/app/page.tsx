@@ -433,6 +433,12 @@ export default function Home() {
     "flex-1 p-3 text-lg font-semibold " +
     (tab === t ? "border-b-4 border-green-600 text-green-700" : "text-gray-500");
 
+  async function salir() {
+    if (!confirm("¿Cerrar sesión?")) return;
+    await fetch("/api/login", { method: "DELETE" });
+    window.location.href = "/login";
+  }
+
   if (tab === "ventas") {
     return (
       <main className="mx-auto max-w-2xl pb-8">
@@ -445,6 +451,9 @@ export default function Home() {
           </button>
           <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
             Ventas
+          </button>
+          <button onClick={salir} className="px-4 text-sm font-medium text-gray-500">
+            Salir
           </button>
         </div>
         <ListaVentas />
@@ -463,6 +472,9 @@ export default function Home() {
         </button>
         <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
           Ventas
+        </button>
+        <button onClick={salir} className="px-4 text-sm font-medium text-gray-500">
+          Salir
         </button>
       </div>
 
