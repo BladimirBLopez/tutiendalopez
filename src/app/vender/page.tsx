@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 type Producto = {
   id: number;
@@ -22,6 +23,7 @@ export default function VenderPage() {
   const [ok, setOk] = useState("");
   const [cobrando, setCobrando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [camara, setCamara] = useState(false);
 
   useEffect(() => {
     if (!q.trim()) {
@@ -71,6 +73,15 @@ export default function VenderPage() {
     const exacto = data.find((p) => p.barcode === code) ?? (data.length === 1 ? data[0] : null);
     if (exacto) agregar(exacto);
     else setError("Producto no encontrado");
+  }
+
+  async function escanearCodigo(code: string) {
+    const res = await fetch("/api/productos?q=" + encodeURIComponent(code));
+    if (!res.ok) return;
+    const data: Producto[] = await res.json();
+    const p = data.find((x) => x.barcode === code);
+    if (p) agregar(p);
+    else setError("Código " + code + " no registrado");
   }
 
   function cambiarCantidad(id: number, delta: number) {
@@ -139,6 +150,19 @@ export default function VenderPage() {
         className={campo}
         autoFocus
       />
+
+      <button
+        onClick={() => setCamara(true)}
+        className="mt-2 w-full rounded-lg bg-gray-800 p-3 font-semibold text-white"
+      >
+        📷 Escanear con cámara
+      </button>
+      {camara && (
+        <BarcodeScanner
+          onScan={escanearCodigo}
+          onClose={() => setCamara(false)}
+        />
+      )}
 
       {resultados.length > 0 && (
         <ul className="mt-2 space-y-1 rounded-lg border p-2">
