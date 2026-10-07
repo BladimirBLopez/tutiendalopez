@@ -78,6 +78,31 @@ export default function DetalleProducto({
     cargar();
   }, [cargar]);
 
+  async function eliminar() {
+    if (!d) return;
+    const vendido = Number(d.unidadesVendidas) > 0;
+    const aviso = vendido
+      ? "Este producto ya tiene ventas. Se va a quitar de la lista, pero el historial de ventas se conserva. ¿Eliminar?"
+      : "¿Eliminar este producto? No se puede deshacer.";
+    if (!confirm(aviso)) return;
+    setError("");
+    setGuardando(true);
+    try {
+      const res = await fetch("/api/productos/" + id, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "No se pudo eliminar");
+        setGuardando(false);
+        return;
+      }
+      onCambio();
+      onClose();
+    } catch {
+      setError("Sin conexión. Intenta otra vez.");
+      setGuardando(false);
+    }
+  }
+
   function empezarEdicion() {
     if (!d) return;
     setF({
@@ -164,6 +189,13 @@ export default function DetalleProducto({
                 Compré más
               </button>
             </div>
+            <button
+              onClick={eliminar}
+              disabled={guardando}
+              className="mt-3 w-full rounded-lg p-3 font-semibold text-red-600 active:bg-red-50 disabled:opacity-50"
+            >
+              🗑️ Eliminar producto
+            </button>
           </>
         )}
 
