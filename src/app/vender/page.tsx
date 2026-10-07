@@ -351,10 +351,10 @@ export default function VenderPage() {
 
           <button
             onClick={cobrar}
-            disabled={carrito.length === 0 || cobrando}
+            disabled={carrito.length === 0 || cobrando || (metodo === "qr" && yapeSel === null)}
             className="w-full rounded-lg bg-blue-600 p-4 text-xl font-bold text-white disabled:opacity-40"
           >
-            {cobrando ? "Registrando..." : "Cobrar"}
+            {cobrando ? "Registrando..." : metodo === "qr" && yapeSel === null ? "Selecciona el pago Yape" : "Cobrar"}
           </button>
         </div>
       </div>

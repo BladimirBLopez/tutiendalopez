@@ -15,6 +15,10 @@ export async function POST(req: Request) {
       ? Number(body.pagoYapeId)
       : null;
 
+  if (metodoPago === "qr" && pagoYapeId === null) {
+    return NextResponse.json({ error: "Selecciona el pago Yape recibido" }, { status: 400 });
+  }
+
   // Unir líneas repetidas y validar
   const cantidades = new Map<number, number>();
   for (const it of Array.isArray(body.items) ? body.items : []) {
@@ -57,6 +61,10 @@ export async function POST(req: Request) {
 
       // Marca el pago Yape como usado (una sola venta por pago)
       if (pagoYapeId !== null) {
+        const pago = await tx.pagoYape.findUnique({ where: { id: pagoYapeId } });
+        if (!pago || Math.abs(Number(pago.monto) - total) > 0.005) {
+          throw new VentaError("El monto del pago Yape no coincide con el total");
+        }
         const usado = await tx.pagoYape.updateMany({
           where: { id: pagoYapeId, estado: "pendiente" },
           data: { estado: "usado" },
