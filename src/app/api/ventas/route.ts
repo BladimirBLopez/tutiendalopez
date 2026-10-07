@@ -72,3 +72,65 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Error al registrar la venta" }, { status: 500 });
   }
 }
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const fecha = searchParams.get("fecha") ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
+  }
+
+  // Día completo en hora de Bolivia (UTC-4)
+  const desde = new Date(fecha + "T00:00:00-04:00");
+  if (isNaN(desde.getTime())) {
+    return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
+  }
+  const hasta = new Date(desde.getTime() + 24 * 60 * 60 * 1000);
+
+  const ventas = await prisma.venta.findMany({
+    where: { createdAt: { gte: desde, lt: hasta } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      items: { include: { producto: { select: { nombre: true } } } },
+    },
+  });
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const resumen = { cantidad: ventas.length, total: 0, ganancia: 0, efectivo: 0, qr: 0 };
+
+  const lista = ventas.map((v) => {
+    const total = Number(v.total);
+    const ganancia = v.items.reduce(
+      (s, it) => s + (Number(it.precioUnit) - Number(it.costoUnit)) * it.cantidad,
+      0
+    );
+    resumen.total += total;
+    resumen.ganancia += ganancia;
+    if (v.metodoPago === "qr") resumen.qr += total;
+    else resumen.efectivo += total;
+
+    return {
+      id: v.id,
+      total,
+      metodoPago: v.metodoPago,
+      createdAt: v.createdAt,
+      ganancia: r2(ganancia),
+      items: v.items.map((it) => ({
+        nombre: it.producto.nombre,
+        cantidad: it.cantidad,
+        precioUnit: Number(it.precioUnit),
+      })),
+    };
+  });
+
+  return NextResponse.json({
+    resumen: {
+      cantidad: resumen.cantidad,
+      total: r2(resumen.total),
+      ganancia: r2(resumen.ganancia),
+      efectivo: r2(resumen.efectivo),
+      qr: r2(resumen.qr),
+    },
+    ventas: lista,
+  });
+}

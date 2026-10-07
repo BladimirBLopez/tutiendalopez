@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import DetalleProducto from "@/components/DetalleProducto";
+import ListaVentas from "@/components/ListaVentas";
 
 type Producto = {
   id: number;
@@ -41,7 +42,7 @@ const redondear = (n: number) => Math.round(n * 100) / 100;
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s) || 0);
 
 export default function Home() {
-  const [tab, setTab] = useState<"vender" | "productos">("vender");
+  const [tab, setTab] = useState<"vender" | "productos" | "ventas">("vender");
   const [q, setQ] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
   const [carrito, setCarrito] = useState<Linea[]>([]);
@@ -67,7 +68,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [cargar]);
 
-  function cambiarTab(t: "vender" | "productos") {
+  function cambiarTab(t: "vender" | "productos" | "ventas") {
     setTab(t);
     setQ("");
     setError("");
@@ -432,6 +433,25 @@ export default function Home() {
     "flex-1 p-3 text-lg font-semibold " +
     (tab === t ? "border-b-4 border-green-600 text-green-700" : "text-gray-500");
 
+  if (tab === "ventas") {
+    return (
+      <main className="mx-auto max-w-2xl pb-8">
+        <div className="sticky top-0 z-10 flex border-b bg-white">
+          <button onClick={() => cambiarTab("vender")} className={tabCls("vender")}>
+            Vender
+          </button>
+          <button onClick={() => cambiarTab("productos")} className={tabCls("productos")}>
+            Productos
+          </button>
+          <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
+            Ventas
+          </button>
+        </div>
+        <ListaVentas />
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-2xl pb-72">
       <div className="sticky top-0 z-10 flex border-b bg-white">
@@ -440,6 +460,9 @@ export default function Home() {
         </button>
         <button onClick={() => cambiarTab("productos")} className={tabCls("productos")}>
           Productos
+        </button>
+        <button onClick={() => cambiarTab("ventas")} className={tabCls("ventas")}>
+          Ventas
         </button>
       </div>
 
