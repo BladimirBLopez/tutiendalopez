@@ -7,6 +7,7 @@ export async function middleware(req: NextRequest) {
   const esPublica =
     pathname === "/login" ||
     pathname === "/api/login" ||
+    pathname === "/api/tiendas" ||
     pathname === "/api/yape/recibir";
   const valida = await verificarToken(req.cookies.get(NOMBRE_COOKIE)?.value);
 

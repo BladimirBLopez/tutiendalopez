@@ -27,12 +27,15 @@ export async function POST(req: Request) {
   }
 
   let password = "";
+  let elegida = 0;
   try {
     const body = await req.json();
     password = String(body?.password ?? "");
+    elegida = Number(body?.tiendaId) || 0;
   } catch {}
 
   const tiendaId = TIENDAS.find((id) => {
+    if (elegida && id !== elegida) return false;
     const esperada = claveDe(id);
     return esperada !== "" && iguales(password, esperada);
   });

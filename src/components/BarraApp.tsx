@@ -21,6 +21,14 @@ export default function BarraApp({
   onSalir: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [tienda, setTienda] = useState("");
+
+  useEffect(() => {
+    fetch("/api/tienda")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((t) => t && setTienda(t.nombre))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = abierto ? "hidden" : "";
@@ -52,6 +60,11 @@ export default function BarraApp({
           ☰
         </button>
         <h1 className="text-xl font-bold">{titulo}</h1>
+        {tienda && (
+          <span className="ml-auto mr-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
+            {tienda}
+          </span>
+        )}
       </header>
 
       {abierto && (
@@ -65,7 +78,7 @@ export default function BarraApp({
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-lg font-bold text-green-700">
                 TL
               </div>
-              <div className="text-lg font-bold leading-tight">Tu Tienda López</div>
+              <div className="text-lg font-bold leading-tight">{tienda || "Tu Tienda López"}</div>
             </div>
 
             <nav className="flex-1 p-2">
