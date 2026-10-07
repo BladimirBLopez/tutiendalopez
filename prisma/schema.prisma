@@ -88,3 +88,8 @@ model PagoYape {
   estado    String   @default("pendiente")
   createdAt DateTime @default(now()) @db.Timestamp(3)
 }
+
+model Tienda {
+  id     Int    @id @default(autoincrement())
+  nombre String
+}
