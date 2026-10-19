@@ -36,7 +36,8 @@ function mover(fecha: string, dias: number) {
 const bs = (n: number) => "Bs. " + n.toFixed(2);
 
 export default function ListaVentas() {
-  const hoy = fmt(new Date());
+  // "Hoy" siempre en hora de Bolivia, sin depender del reloj del celular
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz" }).format(new Date());
   const [fecha, setFecha] = useState(hoy);
   const [datos, setDatos] = useState<Datos | null>(null);
   const [abierta, setAbierta] = useState<number | null>(null);
