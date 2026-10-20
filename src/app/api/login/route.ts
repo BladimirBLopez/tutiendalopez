@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { NOMBRE_COOKIE, DURACION_SEGUNDOS, crearToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 const TIENDAS = [1, 2];
 
@@ -18,6 +20,17 @@ function claveDe(id: number): string {
   return id === 1 ? process.env.APP_PASSWORD ?? "" : "";
 }
 
+const MAX_INTENTOS = 5;
+const VENTANA_MS = 10 * 60 * 1000;
+
+function huellaDe(req: Request): string {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "sin-ip";
+  const ua = req.headers.get("user-agent") ?? "";
+  return createHash("sha256")
+    .update((process.env.AUTH_SECRET ?? "") + "|" + ip + "|" + ua)
+    .digest("hex");
+}
+
 export async function POST(req: Request) {
   if (!process.env.AUTH_SECRET) {
     return NextResponse.json(
@@ -25,6 +38,19 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  const huella = huellaDe(req);
+  try {
+    const recientes = await prisma.intentoLogin.count({
+      where: { huella, createdAt: { gte: new Date(Date.now() - VENTANA_MS) } },
+    });
+    if (recientes >= MAX_INTENTOS) {
+      return NextResponse.json(
+        { error: "Demasiados intentos. Espera 10 minutos e intenta otra vez." },
+        { status: 429 }
+      );
+    }
+  } catch {}
 
   let password = "";
   let elegida = 0;
@@ -41,8 +67,18 @@ export async function POST(req: Request) {
   });
 
   if (!tiendaId) {
+    try {
+      await prisma.intentoLogin.create({ data: { huella } });
+      await prisma.intentoLogin.deleteMany({
+        where: { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      });
+    } catch {}
     return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401 });
   }
+
+  try {
+    await prisma.intentoLogin.deleteMany({ where: { huella } });
+  } catch {}
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set(NOMBRE_COOKIE, await crearToken(tiendaId), {

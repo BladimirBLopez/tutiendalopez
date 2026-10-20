@@ -111,3 +111,11 @@ model PagoYape {
   createdAt DateTime @default(now()) @db.Timestamp(3)
   @@index([tiendaId, estado, createdAt], map: "PagoYape_tiendaId_estado_createdAt_idx")
 }
+
+model IntentoLogin {
+  id        Int      @id @default(autoincrement())
+  huella    String
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+
+  @@index([huella, createdAt], map: "IntentoLogin_huella_createdAt_idx")
+}
