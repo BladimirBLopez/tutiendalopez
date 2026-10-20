@@ -56,6 +56,7 @@ model Venta {
   createdAt  DateTime    @default(now())
   items      ItemVenta[]
   fiado      Fiado?
+  @@index([tiendaId, createdAt], map: "Venta_tiendaId_createdAt_idx")
 }
 
 model ItemVenta {
@@ -67,6 +68,8 @@ model ItemVenta {
   cantidad   Int
   precioUnit Decimal  @db.Decimal(10, 2)
   costoUnit  Decimal  @db.Decimal(10, 2)
+  @@index([ventaId], map: "ItemVenta_ventaId_idx")
+  @@index([productoId], map: "ItemVenta_productoId_idx")
 }
 
 model Fiado {
@@ -106,4 +109,5 @@ model PagoYape {
   remitente String?
   estado    String   @default("pendiente")
   createdAt DateTime @default(now()) @db.Timestamp(3)
+  @@index([tiendaId, estado, createdAt], map: "PagoYape_tiendaId_estado_createdAt_idx")
 }
