@@ -1,5 +1,5 @@
 export const NOMBRE_COOKIE = "sesion";
-export const DURACION_SEGUNDOS = 60 * 60 * 24 * 30; // 30 días
+export const DURACION_SEGUNDOS = 60 * 60 * 24 * 365; // 1 año
 
 const enc = new TextEncoder();
 
